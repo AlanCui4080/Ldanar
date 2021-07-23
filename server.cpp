@@ -8,10 +8,11 @@
 #include <stdio.h>
 extern void listen_connect(int sfd);
 static int sfd;
-void init_server(int port)
+void init_server(int port)//init handshake socket
 {
-    sfd = socket(AF_INET,SOCK_STREAM,0);
+    sfd = socket(AF_INET,SOCK_STREAM,0);//INET4
     printf("main@create socket: %s\n",strerror(errno));
+    
     struct sockaddr_in server_addr;
     memset(&server_addr,0,sizeof(server_addr));
     server_addr.sin_family = AF_INET;
@@ -30,12 +31,12 @@ void destory_sfd(int i )
 {
     shutdown(sfd,SHUT_RDWR);
     close(sfd);
-    printf("main@close sfd: %s\n",strerror(errno));
+    printf("main@close sfd: %d$%s\n",sfd,strerror(errno));
     for (size_t i = 0; i < active_cfd.size(); i++)
     {
         shutdown(active_cfd[i],SHUT_RDWR);
         close(active_cfd[i]);
-        printf("main@close cfd: %s\n",strerror(errno));
+        printf("main@close cfd: %d$%s\n",active_cfd[i],strerror(errno));
     }
     
     _exit(-1);

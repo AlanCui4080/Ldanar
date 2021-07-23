@@ -11,6 +11,9 @@ std::string build_response(response* res)
     retval += res->ver+SPACE+std::to_string(res->stat)+stat_array[(res->stat/100)][(res->stat%100)]+DSL;
     retval += "Server:"+res->server;
     retval += DSL;
+    retval += "Connection:close";
+    retval += DSL;
+
     for(size_t i = 0;i < res->obj.size();i++)
     {
         retval +=res->obj[i].subj+":";
@@ -23,21 +26,18 @@ std::string build_response(response* res)
 
         retval += DSL;
     }   
-    retval += DSL;
     return retval;
 };
 request analyse_request(std::string str)
 {
     request retval;
-    printf("DEBUG:str.substr(0,str.find(\" \") is %s@\n",str.substr(0,str.find(" ")).c_str());
     if(str.substr(0,str.find(" ")) != "GET");
     {
         printf("DEBUG:MUNKNOW\n");
         retval.method=UNKNOW;
     }
     retval.method=GET;
-    printf("DEBUG:str is %s@\n",str.c_str());
-    retval.url =str.substr(str.find("/"),str.find("H")-str.find("/")-1);
+    if(str.find("H")!=std::string::npos&&str.find("/")!=std::string::npos)retval.url =str.substr(str.find("/"),str.find("H")-str.find("/")-1);
     return retval;
 }
 response respond(request rq)
@@ -51,14 +51,14 @@ response respond(request rq)
     std::streampos ps = fin.tellg(); 
     fin.seekg(0);   
     if(ps <=0){retval.stat=404;printf("DEBUG:404 at file!\n");return retval;}
-    printf("DEBUG:file len%d\n",ps);
+    printf("DEBUG:file len%d\n",(int)ps);
     if(ps > INT_MAX){retval.stat=413;return retval;}
     else{
         http_resp_obj tmp;
         tmp.info.push_back("text/html");
         tmp.subj = "Content-Type";
         retval.obj.push_back(tmp);
-        char* bf = (char*)malloc(ps+8);
+        char* bf = (char*)malloc((int)ps+8);
         fin.read(bf,ps);
         retval.data = bf;
         retval.datalen = ps;
