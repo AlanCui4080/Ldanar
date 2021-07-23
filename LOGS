@@ -1,0 +1,9 @@
+2021/07/23:FIX: crash while too many (>15~) coonnetion has been progressing
+    reason: The fd's valve is passed by a pointer.before the kernel wakeup the sub-thread the, next handshake came
+        and changes the valve.After that the old thread wokeup and try to use the valve passed,the valve actually
+        is the "new" socket,and it causes problems
+           FIX: requests will be blocked or throwed 
+    reason: **it's still NOT fix totally** 2 times of accept and a uslepp will solve this problem
+        the browser's action is weird,it seems that brower sends two handshake , the first one will be the data tunnel
+        the second one will be used in next time(?)
+                                                                                                        --AlanCui4080
