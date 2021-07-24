@@ -1,1 +1,1 @@
-netstat -a | grep 8010
+netstat | grep 8010
