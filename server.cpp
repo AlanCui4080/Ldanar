@@ -6,12 +6,67 @@
 #include <errno.h>
 #include <vector>
 #include <stdio.h>
-extern void listen_connect(int sfd);
+#include "session.hpp"
+#include "log.hpp"
+#include "session.hpp"
+//extern void listen_connect(int sfd);
+namespace ldanar
+{
 static int sfd;
+void listen_connect(int sfd)
+{
+    static struct sockaddr_in conn_addr;
+    socklen_t len = sizeof(conn_addr);
+    int rvfd, sdfd;
+
+    while (1)
+    {
+        //int pfd[2] = {0};
+        //pipe(pfd);
+        //for (size_t i = 0; i < 2; i++);//i don't know why it needs 2 times! but it works!
+        //{
+        // static handelst* hs = (handelst*)malloc(sizeof(handelst));
+        rvfd = accept(sfd, (struct sockaddr *)&conn_addr, &len);
+        // hs->fd = rvfd;
+        //hs.pipe = pfd[1];
+        ldanar::log("accept connect.");
+        ldanar::start_session(rvfd,conn_addr);
+        /*static pthread_t a; //just a junk
+        active_cfd.push_back(rvfd);*
+        pthread_create(&a, NULL, http_handle_recv, (void *)(unsigned long long)rvfd);*/
+
+        // yes it's funny,turn a int into a void* and turn it back is not
+        //a good idea,but it can solve problems on memory opertions.
+
+        /**************************************************/
+        //   hs = (handelst*)malloc(sizeof(handelst));
+        /*rvfd = accept(sfd, (struct sockaddr *)&conn_addr, &len);
+        //  hs->fd = rvfd;
+        //hs.pipe = pfd[1];
+        printf("main@accepted recv-cfd:%d:%s\n", rvfd, strerror(errno));
+
+        active_cfd.push_back(rvfd);
+        pthread_create(&a, NULL, http_handle_recv, (void *)(unsigned long long)rvfd);*/
+        //}
+
+        //Yeah SIR,accept twice can avoid the problems,but while(1) cannot
+        //i don't know why,but the fucking CPP is just like this
+
+        /*sdfd = accept(sfd,(struct sockaddr *)&conn_addr,&len);
+            hs.fd = sdfd;
+            hs.pipe = pfd[0];
+            printf("main@accepted send-cfd:%d\n",sdfd);
+            //close(pfd[0]);
+            //usleep(20);
+            pthread_t b;
+            active_cfd.push_back(sdfd);
+            pthread_create(&a,NULL,handle_recv,hs);*/
+    }
+}
 void init_server(int port)//init handshake socket
 {
     sfd = socket(AF_INET,SOCK_STREAM,0);//INET4
-    printf("main@create socket: %s\n",strerror(errno));
+    ldanar::log("create socket:%s",strerror(errno));
     
     struct sockaddr_in server_addr;
     memset(&server_addr,0,sizeof(server_addr));
@@ -20,10 +75,10 @@ void init_server(int port)//init handshake socket
     server_addr.sin_port = htons(port);
 
     if(bind(sfd,(struct sockaddr *)&server_addr,sizeof(server_addr))) printf("ERR!");
-    printf("main@bind: %s\n",strerror(errno));
+    ldanar::log("bind:%s",strerror(errno));
 
     if(listen(sfd,1)) printf("ERR!");
-    printf("main@listen: %s\n",strerror(errno));
+    ldanar::log("listen:%s",strerror(errno));
     listen_connect(sfd);
 }
 extern std::vector<int> active_cfd;
@@ -40,4 +95,5 @@ void destory_sfd(int i )
     }
     
     _exit(-1);
+}
 }

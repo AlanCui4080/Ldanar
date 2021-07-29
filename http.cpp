@@ -1,13 +1,15 @@
-#include <http.hpp>
+#include <http.h>
 #include <ctlchr.hpp>
-#include <unistd.h> 
+#include <unistd.h>
 #include <string>
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
 #include <climits>
-std::vector<std::string> npos;
-std::vector<std::string> request::find_option(std::string subj)//simply,so there is no commit
+
+std::vector<std::string> ldanar::http::npos;
+
+std::vector<std::string> ldanar::http::request::find_option(std::string subj) //simply,so there is no commit
 {
     printf("obj_size%lu\n", this->obj.size());
     for (size_t i = 0; i < this->obj.size(); i++)
@@ -20,13 +22,13 @@ std::vector<std::string> request::find_option(std::string subj)//simply,so there
         }
     }
     printf("npos!");
-    return npos;
+    return ldanar::http::npos;
 }
 /********************************************************************/
-std::string build_response(response res)
+std::string ldanar::http::build_response(ldanar::http::response res)
 {
     std::string retval;
-    retval += res.ver + SPACE + std::to_string(res.stat) + stat_array[(res.stat) / 100][(res.stat) % 100] + DSL;
+    retval += res.ver + SPACE + std::to_string(res.status) + stat_array[(res.status) / 100][(res.status) % 100] + DSL;
     for (size_t i = 0; i < res.obj.size(); i++)
     {
         retval += res.obj[i].subj + ":";
@@ -43,9 +45,9 @@ std::string build_response(response res)
     return retval;
 };
 
-std::vector<http_req_obj> deatch_request(std::string str)
+std::vector<ldanar::basic_data> deatch_request(std::string str)
 {
-    std::vector<http_req_obj> retval;
+    std::vector<ldanar::basic_data> retval;
     size_t pos, lpos;
     lpos = 0;
     for (pos = 0; str[pos] != '\n' && pos < str.size(); pos++) //skip the first line
@@ -57,7 +59,7 @@ std::vector<http_req_obj> deatch_request(std::string str)
     {
         if (str[pos] == '\r')
             break;
-        for (; str[pos] != '\n' && pos < str.size(); pos++) 
+        for (; str[pos] != '\n' && pos < str.size(); pos++)
             ;
         lines.push_back(str.substr(lpos, pos - lpos - 1));
         pos++;
@@ -65,13 +67,13 @@ std::vector<http_req_obj> deatch_request(std::string str)
     }
     for (size_t i = 0; i < lines.size(); i++)
     {
-        http_req_obj obj;
-        obj.subj = lines[i].substr(0, lines[i].find(':'));//got subject
+        ldanar::http::request obj;
+        obj.subj = lines[i].substr(0, lines[i].find(':')); //got subject
         pos = lines[i].find(':') + 1;
         for (; lines[i][pos] != ' ' && pos < lines[i].size(); pos++) //skip spaces
             ;
         lpos = pos;
-        while (1)//got infos
+        while (1) //got infos
         {
             if (pos >= lines[i].size())
                 break;
@@ -86,28 +88,28 @@ std::vector<http_req_obj> deatch_request(std::string str)
 
     return retval;
 }
-request analyse_request(std::string str)
+ldanar::http::request ldanar::http::analyse_request(std::string str)
 {
-    request retval;
+    ldanar::http::request retval;
     if (str.find("GET") == std::string::npos) //we can only analyse GET requests now
     {
         printf("DEBUG:MUNKNOW\n");
-        retval.method = UNKNOWN;
+        retval.method = ldanar::http::method::UNKNOWN;
         return retval;
     }
-    retval.method = GET;
+    retval.method = ldanar::http::method::GET;
     retval.url = str.substr(str.find("/"), str.find("H") - str.find("/") - 1);
     retval.obj = deatch_request(str);
     return retval;
 }
-response respond(request rq)
+ldanar::http::response ldanar::http::respond(ldanar::http::request rq)
 {
-    response retval;
-    retval.stat = 200;
+    ldanar::http::response retval;
+    retval.status = 200;
     retval.flags = rq.flags;
-    if (rq.method == UNKNOWN)
+    if (rq.method == ldanar::http::method::UNKNOWN)
     {
-        retval.stat = 413;
+        retval.status = 413;
         printf("DEBUG:413 at file!\n");
         return retval;
     }
@@ -117,47 +119,43 @@ response respond(request rq)
     std::ifstream fin(rq.url);
     printf("DEBUG:trying to open @%s@\n", rq.url.c_str());
 
-    fin.seekg(0, std::ios::end ); // 设置指针到文件流尾部
+    fin.seekg(0, std::ios::end); // 设置指针到文件流尾部
     std::streampos ps = fin.tellg();
     fin.seekg(0);
 
     auto rg = rq.find_option("Range");
-    if (rg != npos)
+    if (rg != ldanar::http::npos)
     {
         printf("Range Found:%s\n", rg[0].c_str());
-        retval.flags |= _RCB_DEATCH_SEG;
+        retval.flags |= ldanar::flag::DEATCH_SEG;
         if (rg[0].find("bytes") == std::string::npos)
         {
-            retval.server = "ladanar_dev";
-            retval.ver = "HTTP/1.1";
-            retval.stat = 406;
+            retval.status = 406;
             return retval;
         }
-        printf("start:%s@\n", rg[0].substr(rg[0].find('=')+1,rg[0].find('-')-rg[0].find('=')-1).c_str());
-        retval.dseg.start = std::stol(rg[0].substr(rg[0].find('=')+1,rg[0].find('-')-rg[0].find('=')-1));
-        
+        printf("start:%s@\n", rg[0].substr(rg[0].find('=') + 1, rg[0].find('-') - rg[0].find('=') - 1).c_str());
+        retval.dseg.start = std::stol(rg[0].substr(rg[0].find('=') + 1, rg[0].find('-') - rg[0].find('=') - 1));
 
-        if (rg[0].find('-') >= rg[0].size()-1)
+        if (rg[0].find('-') >= rg[0].size() - 1)
             retval.dseg.end = 0;
         else
         {
             retval.dseg.end = stol(rg[0].substr(rg[0].find('-') + 1));
         }
-        retval.stat = 206;
+        retval.status = 206;
     }
     printf("DEBUG:file len%d\n", (int)ps);
     if (ps <= 0)
     {
-        retval.stat = 404;
+        retval.status = 404;
         printf("DEBUG:404 at file!\n");
-        retval.server = "ladanar_dev";
         retval.ver = "HTTP/1.1";
         return retval;
     }
-    if ((int)ps > MX_TRANS_SIZE && !(retval.flags & _RCB_DEATCH_SEG))
+    if ((int)ps > MX_TRANS_SIZE && !(retval.flags &  ldanar::flag::DEATCH_SEG))
     {
         /*printf("%d>@touched bigfile\n", gettid());*/
-        retval.flags |= _RCB_DEATCH_SEG;
+        retval.flags |=  ldanar::flag::DEATCH_SEG;
         //retval.flags |= _RCB_BIG_FILE;
         /*retval.dseg.start = 0;*/
         retval.dseg.end = 0;
@@ -167,7 +165,7 @@ response respond(request rq)
         //retval.obj.push_back(obj);
         retval.stat = 206;*/
     }
-    http_resp_obj tmp;
+    ldanar::basic_data tmp;
     tmp.subj = "Content-Type";
     for (size_t i = 0; i < NR_MIME; i++)
     {
@@ -176,7 +174,7 @@ response respond(request rq)
     };
     retval.obj.push_back(tmp);
     printf("%d>@started READ\n", gettid());
-    if(!(retval.flags & _RCB_BIG_FILE))// now the session will take its place
+    if (!(retval.flags & ldanar::flag::BIG_FILE)) // now the session will take its place
     {
         printf("%d>@DONOT PREREAD\n", gettid());
         char *bf = (char *)malloc((int)ps + 8);
@@ -184,7 +182,6 @@ response respond(request rq)
         retval.data = bf;
     }
     retval.datalen = ps;
-    retval.server = "ladanar_dev";
     retval.ver = "HTTP/1.1";
     fin.close();
     return retval;
